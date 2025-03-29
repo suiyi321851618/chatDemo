@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园智能问答系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">校园智能问答</a>
+                <div class="collapse navbar-collapse">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showSection('qa')">智能问答</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showSection('knowledge')">知识库管理</a>
+                        </li>
+                    </ul>
+                    <button class="btn btn-light" onclick="logout()">注销</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 智能问答模块 -->
+        <div id="qaSection">
+            <div class="question-box">
+                <!-- 原有问答输入框 -->
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="inputQuestion" placeholder="请输入您的问题...">
+                    <button class="btn btn-primary" onclick="askQuestion()">提问</button>
+                </div>
+                <div id="answer" class="mt-3"></div>
+            </div>
+
+
+            <!-- 文档上传模块 -->
+            <div class="document-box mt-4">
+                <h4>文档解析</h4>
+                <input type="file" id="docUpload" class="form-control mb-3"
+                       accept=".pdf,.doc,.docx,.txt">
+                <!-- 在HTML中添加必要的元素 -->
+                <div id="uploadStatus" class="upload-status mb-2"></div>
+                <div id="docPreview" class="doc-preview"></div>
+
+            </div>
+
+            <!-- 搜索历史模块 -->
+            <div class="history-box mt-4">
+                <h4>搜索历史</h4>
+                <div id="searchHistory" class="list-group"></div>
+            </div>
+        </div>
+
+        <!-- 知识库管理界面 -->
+<div class="knowledge-operations" id="knowledgeSection">
+    <button class="btn btn-primary" onclick="fetchKnowledge()">刷新列表</button>
+    <button class="btn btn-success" onclick="showAddKnowledgeModal()">新增条目</button>
+    <div id="knowledgeList" class="list-group"></div>
+</div>
+
+<!-- 历史记录表格容器 -->
+<div id="history-table-container" class="mt-4"></div>
+
+<!-- 通知区域 -->
+<div id="notification-area" class="position-fixed top-0 end-0 p-3"></div>
+
+    </div>
+
+    <!-- 所有JavaScript整合 -->
+    <script>
+// 安全元素获取函数 (增强版)
+const getSafeElement = (selector, context = document) => {
+  const el = context.querySelector(selector);
+  if (!el) {
+    const errMsg = `Required element not found: ${selector}`;
+    console.error(errMsg);
+    throw new Error(errMsg);
+  }
+  return el;
+};
+
+// 页面元素常量
+const ELEMENTS = {
+  uploadInput: '#docUpload',
+  statusElement: '#uploadStatus',
+  previewElement: '#docPreview',
+  qaSection: '#qaSection',
+  knowledgeSection: '#knowledgeSection',
+  navLinks: '.nav-link'
+};
+
+// 全局状态
+const AppState = {
+  currentFile: null,
+  uploadProgress: 0,
+  activeSection: 'qa'
+};
+
+// DOM初始化
+const initializeDOMElements = () => {
+  return {
+    uploadInput: getSafeElement(ELEMENTS.uploadInput),
+    statusElement: getSafeElement(ELEMENTS.statusElement),
+    previewElement: getSafeElement(ELEMENTS.previewElement),
+    qaSection: getSafeElement(ELEMENTS.qaSection),
+    knowledgeSection: getSafeElement(ELEMENTS.knowledgeSection),
+    navLinks: document.querySelectorAll(ELEMENTS.navLinks)
+  };
+};
+
+// 视图控制模块
+const ViewController = {
+  showSection(section) {
+    this.qaSection.style.display = section === 'qa' ? 'block' : 'none';
+    this.knowledgeSection.style.display = section === 'knowledge' ? 'block' : 'none';
+    AppState.activeSection = section;
+  },
+
+  updateStatus(text, type = 'info') {
+    this.statusElement.textContent = text;
+    this.statusElement.className = `upload-status ${type}`;
+  },
+
+  clearPreview() {
+    this.previewElement.innerHTML = '';
+  }
+};
+
+
+// 文件处理模块
+const FileHandler = {
+  async uploadFile(file) {
+    if (!(file instanceof File)) {
+      throw new Error('Invalid file object');
+    }
+
+    const formData = new FormData();
+    formData.append('document', file);
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `Upload failed (${response.status})`);
+    }
+
+    return response.json();
+  },
+
+  readFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('File reading failed'));
+
+      if (file.type.startsWith('text/')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+};
+
+ async function askQuestion() {
+            const question = document.getElementById('inputQuestion').value;
+            const answerDiv = document.getElementById('answer');
+
+            answerDiv.innerHTML = "<div class='spinner-border text-primary' role='status'></div> 思考中...";
+
+            try {
+                const response = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    answerDiv.innerHTML = `<p class="mb-0">${data.answer}</p>`;
+                } else {
+                    answerDiv.innerHTML = `<p class="text-danger mb-0">出错了：${data.message}</p>`;
+                }
+            } catch (error) {
+                answerDiv.innerHTML = `<p class="text-danger mb-0">网络请求失败</p>`;
+            }
+        }
+
+// 事件处理器
+const setupEventListeners = (elements) => {
+  // 文件上传处理
+  elements.uploadInput.addEventListener('change', async (e) => {
+    try {
+      const file = e.target.files;
+      if (!file) return;
+
+      ViewController.updateStatus('上传中...', 'loading');
+      AppState.currentFile = file;
+
+      // 显示预览
+      const content = await FileHandler.readFile(file);
+      ViewController.previewElement.innerHTML = `
+        <div class="file-preview">
+          <h4>${file.name}</h4>
+          <p>类型: ${file.type}</p>
+          <pre>${content.slice(0, 500)}</pre>
+        </div>
+      `;
+
+      // 执行上传
+      const result = await FileHandler.uploadFile(file);
+      ViewController.updateStatus('上传成功', 'success');
+
+    } catch (error) {
+      ViewController.updateStatus(error.message, 'error');
+      console.error('Upload error:', error);
+    }
+  });
+
+  // 导航处理
+  elements.navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = e.target.dataset.section;
+      ViewController.showSection(section);
+    });
+  });
+};
+
+// 主初始化函数
+const initializeApp = () => {
+  try {
+    const elements = initializeDOMElements();
+    Object.assign(ViewController, elements);
+    setupEventListeners(elements);
+    ViewController.showSection(AppState.activeSection);
+  } catch (error) {
+    console.error('应用初始化失败:', error);
+    document.body.innerHTML = `<div class="error">${error.message}</div>`;
+  }
+};
+
+// 启动应用
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+
+
+// 获取历史记录（带分页）
+async function fetchHistory(page = 1, pageSize = 20) {
+    try {
+        const response = await fetch(`/api/history?page=${page}&size=${pageSize}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!response.ok) throw new Error('请求失败');
+
+        const data = await response.json();
+        return {
+            success: true,
+            total: data.total,
+            items: data.items
+        };
+    } catch (error) {
+        console.error('获取历史记录失败:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+// 页面调用示例
+async function loadHistoryPage() {
+    const result = await fetchHistory(1);
+    if (result.success) {
+        renderHistoryTable(result.items); // 自定义渲染函数
+        initPagination(result.total);     // 初始化分页控件
+    } else {
+        showErrorAlert(result.error);
+    }
+}
+
+// 获取知识库列表
+async function fetchKnowledge() {
+    try {
+        const response = await fetch('/api/knowledge', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!response.ok) throw new Error('请求失败');
+
+        const data = await response.json();
+        renderKnowledgeList(data.items); // 自定义渲染函数
+    } catch (error) {
+        console.error('获取知识库失败:', error);
+        showNotification('error', '获取知识库失败');
+    }
+}
+
+// 新增知识条目
+async function addKnowledgeItem(title, content) {
+    try {
+        const response = await fetch('/api/knowledge', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ title, content })
+        });
+
+        const result = await response.json();
+
+        if (response.status === 201) {
+            return { success: true, id: result.id };
+        }
+        return { success: false, error: result.message };
+    } catch (error) {
+        return { success: false, error: '网络异常' };
+    }
+}
+
+// 删除知识条目
+async function deleteKnowledgeItem(itemId) {
+    try {
+        const response = await fetch(`/api/knowledge?id=${itemId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        return response.ok;
+    } catch (error) {
+        return false;
+    }
+}
+
+
+// 注销函数
+async function logout() {
+    try {
+        const response = await fetch('/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (response.ok) {
+            // 清除客户端存储
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('currentPage');
+            // 跳转至登录页
+            window.location.href = '/login';
+        } else {
+            const error = await response.json();
+            alert(`注销失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('注销异常:', error);
+        alert('网络连接异常');
+    }
+}
+
+    </script>
+</body>
+</html>

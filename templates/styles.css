@@ -1,0 +1,211 @@
+/* 全局样式 */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Arial', sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+}
+
+/* 文件上传区域样式 */
+.file-upload-area {
+  border: 2px dashed #ccc;
+  padding: 2rem;
+  text-align: center;
+  transition: border-color 0.3s;
+}
+
+.file-upload-area.dragover {
+  border-color: #0d6efd;
+}
+
+/* 预览区域样式 */
+#docPreview pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+
+/* 状态提示样式 */
+.alert-info {
+  background: #e7f3ff;
+  border-color: #b8daff;
+  color: #004085;
+}
+
+.alert-success {
+  background: #e6ffed;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.alert-error {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+/* 文件输入区域增强样式 */
+.custom-file-input {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+}
+
+/* 预览卡片样式 */
+.preview-card {
+  margin-top: 1rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+}
+
+.preview-card pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.25rem;
+}
+
+
+.question-box {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+#answer {
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-top: 15px;
+}
+
+.spinner-border {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    vertical-align: text-bottom;
+}
+
+body {
+
+}
+
+.container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: #ffffff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+/* 智能问答系统页面样式 */
+.question-box {
+    margin-top: 20px;
+}
+
+.question-box input {
+    width: calc(100% - 120px);
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.question-box button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: #ffffff;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.question-box button:hover {
+    background-color: #0056b3;
+}
+
+#answer {
+    margin-top: 20px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* 登录页面样式 */
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+form label {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+form input {
+    margin-top: 5px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+form button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #28a745;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+form button:hover {
+    background-color: #218838;
+}
+/* 新增样式 */
+.history-box {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-top: 30px;
+}
+
+.list-group-item {
+    transition: transform 0.2s;
+}
+
+.list-group-item:hover {
+    transform: translateX(5px);
+}
+
+#knowledgeList .list-group-item {
+    margin-bottom: 15px;
+    border-left: 3px solid #0d6efd;
+}
+
+#docPreview {
+    max-height: 300px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
