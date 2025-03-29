@@ -1,0 +1,143 @@
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
+from flask_mysqldb import MySQL
+import bcrypt
+import os
+from qa_system import CampusQA
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.urandom(24)
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'  # MySQL用户名
+app.config['MYSQL_PASSWORD'] = '1234'  # MySQL密码
+app.config['MYSQL_DB'] = 'campus_qa'
+
+mysql = MySQL(app)
+qa_engine = CampusQA()
+
+
+# --------------------------
+# 用户认证相关路由
+# --------------------------
+
+@app.route('/')
+def index():
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('index.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        student_id = request.form['student_id']
+        password = request.form['password']
+
+        cur = mysql.connection.cursor()
+        cur.execute("SELECT * FROM users WHERE student_id = %s", [student_id])
+        user = cur.fetchone()
+
+        if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
+            session['student_id'] = user[0]
+            return redirect(url_for('index'))
+        return "用户名或密码错误", 400
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('student_id', None)
+    return redirect(url_for('login'))
+
+
+# --------------------------
+# 问答系统相关路由
+# --------------------------
+
+@app.route('/ask', methods=['POST'])
+def ask_question():
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        data = request.get_json()
+        if not data or 'question' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "Invalid JSON or missing 'question' field"
+            }), 400
+
+        question = data['question']
+        answer = qa_engine.generate_answer(question)
+
+        # 保存查询历史
+        cur = mysql.connection.cursor()
+        cur.execute(
+            "INSERT INTO search_history (student_id, query) VALUES (%s, %s)",
+            (session['student_id'], question)
+        )
+        mysql.connection.commit()
+
+        return jsonify({
+            "status": "success",
+            "question": question,
+            "answer": answer
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/batch_ask', methods=['POST'])
+def batch_ask():
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    questions = request.json['questions']
+    results = qa_engine.batch_retrieve(questions)
+    return jsonify(results)
+
+
+# --------------------------
+# 知识库管理路由
+# --------------------------
+
+@app.route('/upload_knowledge', methods=['POST'])
+def upload_knowledge():
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    file = request.files['file']
+    if not file:
+        return jsonify({
+            "status": "error",
+            "message": "No file uploaded"
+        }), 400
+
+    file_path = os.path.join('data', file.filename)
+    file.save(file_path)
+
+    # 解析文件内容并更新知识库
+    qa_engine.load_knowledge(file_path)
+    return jsonify({
+        "status": "success",
+        "message": "Knowledge uploaded successfully"
+    })
+
+
+@app.route('/delete_knowledge', methods=['POST'])
+def delete_knowledge():
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    knowledge_id = request.json.get('knowledge_id')
+    # TODO: 实现根据knowledge_id删除知识库内容
+    return jsonify({
+        "status": "success",
+        "message": "Knowledge deleted successfully"
+    })
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
